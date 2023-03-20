@@ -10,7 +10,7 @@ import numpy as np
 import random
 
 
-MAX_EPISODE_LEN = 1000
+MAX_EPISODE_LEN = 4000
 
 
 class SubTrajectory(torch.utils.data.Dataset):

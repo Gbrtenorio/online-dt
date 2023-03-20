@@ -85,12 +85,22 @@ class SequenceTrainer:
             padding_mask=padding_mask,
         )
 
+        #print("states : {}".format(states))
+        #print("actions : {}".format(actions))
+        #print("rewards : {}".format(rewards))
+        #torch.save(action_preds, 'action_preds.pt')
         loss, nll, entropy = loss_fn(
             action_preds,  # a_hat_dist
             action_target,
             padding_mask,
             self.model.temperature().detach(),  # no gradient taken here
         )
+
+        #print("action_preds: {}".format(action_preds))
+        #print("action_target: {}".format(action_target))
+        #print("padding_mask: {}".format(padding_mask))
+        #print("loss trainer.py : {}".format(loss))
+
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.25)

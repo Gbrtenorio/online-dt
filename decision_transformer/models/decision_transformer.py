@@ -23,6 +23,7 @@ import numpy as np
 import torch.nn.functional as F
 from torch import distributions as pyd
 
+torch.autograd.set_detect_anomaly(True)
 
 class TanhTransform(pyd.transforms.Transform):
     domain = pyd.constraints.real
@@ -91,6 +92,11 @@ class SquashedNormal(pyd.transformed_distribution.TransformedDistribution):
         # log_prob(x): (batch_size, context_len, action_dim)
         # sum up along the action dimensions
         # Return tensor shape: (batch_size, context_len)
+        '''
+        print("torch max: {}".format(torch.max(x)))
+        print("torch min: {}".format(torch.min(x)))
+        '''
+        #return torch.nan_to_num(self.log_prob(x).sum(axis=2))
         return self.log_prob(x).sum(axis=2)
 
 
@@ -121,6 +127,12 @@ class DiagGaussianActor(nn.Module):
         log_std_min, log_std_max = self.log_std_bounds
         log_std = log_std_min + 0.5 * (log_std_max - log_std_min) * (log_std + 1.0)
         std = log_std.exp()
+        '''
+        print("mu: {}".format(mu))
+        print("log_std {}".format(log_std))
+        print("std {}".format(std))
+        '''
+
         return SquashedNormal(mu, std)
 
 
@@ -164,6 +176,10 @@ class DecisionTransformer(TrajectoryModel):
             self.embed_ordering = nn.Embedding(max_ep_len, hidden_size)
         self.embed_return = torch.nn.Linear(1, hidden_size)
         self.embed_state = torch.nn.Linear(self.state_dim, hidden_size)
+        '''
+        print("state_dim: {}".format(state_dim))
+        print("hidden_size: {}".format(hidden_size))
+        '''
         self.embed_action = torch.nn.Linear(self.act_dim, hidden_size)
 
         self.embed_ln = nn.LayerNorm(hidden_size)
@@ -212,15 +228,37 @@ class DecisionTransformer(TrajectoryModel):
             # attention mask for GPT: 1 if can be attended to, 0 if not
             padding_mask = torch.ones((batch_size, seq_length), dtype=torch.long)
 
+        #torch.save(states, 'states.pt')
+        #torch.save(self.embed_state, 'embed_state.pt')
+
+        #print("embed_state_weights: {}".format(self.embed_state.weight))
+        #print("states {} ".format(states))
+        '''
+        print("max states {} ".format(torch.max(states)))
+        print("min states {} ".format(torch.min(states)))
+        print("max actions {}".format(torch.max(actions)))
+        print("min actions {}".format(torch.min(actions)))
+        print("max returns_to_go {}".format(torch.max(returns_to_go)))
+        print("min returns_to_go {}".format(torch.min(returns_to_go)))
+        '''
+
         # embed each modality with a different head
         state_embeddings = self.embed_state(states)
         action_embeddings = self.embed_action(actions)
         returns_embeddings = self.embed_return(returns_to_go)
+        #torch.save(state_embeddings, 'state_embeddings.pt')
+
 
         if self.ordering:
             order_embeddings = self.embed_ordering(timesteps)
         else:
             order_embeddings = 0.0
+
+
+        #print("returns_embeddings {} ".format(returns_embeddings))
+        #print("state_embeddings {}".format(state_embeddings))
+        #print("action_embeddings {}".format(action_embeddings))
+
 
         state_embeddings = state_embeddings + order_embeddings
         action_embeddings = action_embeddings + order_embeddings
@@ -228,6 +266,8 @@ class DecisionTransformer(TrajectoryModel):
 
         # this makes the sequence look like (R_1, s_1, a_1, R_2, s_2, a_2, ...)
         # which works nice in an autoregressive sense since states predict actions
+
+
         stacked_inputs = (
             torch.stack(
                 (returns_embeddings, state_embeddings, action_embeddings), dim=1
@@ -250,6 +290,9 @@ class DecisionTransformer(TrajectoryModel):
             attention_mask=stacked_padding_mask,
         )
         x = transformer_outputs["last_hidden_state"]
+        #print("x: {}".format(x))
+        #print("stacked_inputs: {}".format(stacked_inputs))
+        #print("stacked_padding_mask: {}".format(stacked_padding_mask))
 
         # reshape x so that the second dimension corresponds to the original
         # returns (0), states (1), or actions (2); i.e. x[:,1,t] is the token for s_t
@@ -261,6 +304,7 @@ class DecisionTransformer(TrajectoryModel):
         # predict next state given state and action
         state_preds = self.predict_state(x[:, 2])
         # predict next action given state
+
         action_preds = self.predict_action(x[:, 1])
 
         return state_preds, action_preds, return_preds

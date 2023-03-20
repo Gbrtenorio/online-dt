@@ -8,7 +8,7 @@ LICENSE.md file in the root directory of this source tree.
 import numpy as np
 import torch
 
-MAX_EPISODE_LEN = 1000
+MAX_EPISODE_LEN = 4000
 
 
 def create_vec_eval_episodes_fn(
