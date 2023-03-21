@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
 # In[1]:
+
+
+import torch
 import gc
 
 
@@ -164,8 +164,6 @@ torch.no_grad()
 
 # Load the weights on the model
 model.load_state_dict(loaded_model['model_state_dict'])
-
-
 # Set model to evaluation mode
 model.eval()
 # Convert model to GPU
@@ -175,7 +173,6 @@ model.to(device=args.device);
 
 
 # Nao gostei disso pq tem a ver com o Dataset
-# TODO: Load
 offline_trajs, state_mean, state_std = _load_dataset(args.env)
 state_mean = torch.from_numpy(state_mean).to(device=device)
 state_std = torch.from_numpy(state_std).to(device=device)
@@ -253,102 +250,102 @@ max_ep_len
 
 actions.shape
 
-# In[19]:
+# In[ ]:
 
 
-for t in range(max_ep_len):
-    # add padding
-    actions = torch.cat(
-        [
-            actions,
-            torch.zeros((num_envs, act_dim), device=device).reshape(
-                num_envs, -1, act_dim
-            ),
-        ],
-        dim=1,
-    )
-    rewards = torch.cat(
-        [
-            rewards,
-            torch.zeros((num_envs, 1), device=device).reshape(num_envs, -1, 1),
-        ],
-        dim=1,
-    )
+with torch.no_grad():
+    for t in range(max_ep_len):
+        # add padding
+        actions = torch.cat(
+            [
+                actions,
+                torch.zeros((num_envs, act_dim), device=device).reshape(
+                    num_envs, -1, act_dim
+                ),
+            ],
+            dim=1,
+        )
+        rewards = torch.cat(
+            [
+                rewards,
+                torch.zeros((num_envs, 1), device=device).reshape(num_envs, -1, 1),
+            ],
+            dim=1,
+        )
 
-    state_pred, action_dist, reward_pred = model.get_predictions(
-        (states.to(dtype=torch.float32) - state_mean) / state_std,
-        actions.to(dtype=torch.float32),
-        rewards.to(dtype=torch.float32),
-        target_return.to(dtype=torch.float32),
-        timesteps.to(dtype=torch.long),
-        num_envs=num_envs,
-    )
-    state_pred = state_pred.detach().cpu().numpy().reshape(num_envs, -1)
-    reward_pred = reward_pred.detach().cpu().numpy().reshape(num_envs)
+        state_pred, action_dist, reward_pred = model.get_predictions(
+            (states.to(dtype=torch.float32) - state_mean) / state_std,
+            actions.to(dtype=torch.float32),
+            rewards.to(dtype=torch.float32),
+            target_return.to(dtype=torch.float32),
+            timesteps.to(dtype=torch.long),
+            num_envs=num_envs,
+        )
+        state_pred = state_pred.detach().cpu().numpy().reshape(num_envs, -1)
+        reward_pred = reward_pred.detach().cpu().numpy().reshape(num_envs)
 
-    # the return action is a SquashNormal distribution
-    action = action_dist.sample().reshape(num_envs, -1, act_dim)[:, -1]
-    if use_mean:
-        action = action_dist.mean.reshape(num_envs, -1, act_dim)[:, -1]
-    action = action.clamp(*model.action_range)
+        # the return action is a SquashNormal distribution
+        action = action_dist.sample().reshape(num_envs, -1, act_dim)[:, -1]
+        if use_mean:
+            action = action_dist.mean.reshape(num_envs, -1, act_dim)[:, -1]
+        action = action.clamp(*model.action_range)
 
-    # TODO: nao entendo pq esta gerando um [] a mais e se isso atrapalhou no training
-    # print("action: {}".format(action[0]))
-    state, reward, done, _ = vec_env.step(action.detach().cpu().numpy()[0])
-    #vec_env.render()
-    # state, reward, done, _ = vec_env.step(action.detach().cpu().numpy())
+        # TODO: nao entendo pq esta gerando um [] a mais e se isso atrapalhou no training
+        # print("action: {}".format(action[0]))
+        state, reward, done, _ = vec_env.step(action.detach().cpu().numpy()[0])
+        # vec_env.render()
+        # state, reward, done, _ = vec_env.step(action.detach().cpu().numpy())
 
-    # eval_env.step() will execute the action for all the sub-envs, for those where
-    # the episodes have terminated, the envs will be reset. Hence we use
-    # "unfinished" to track whether the first episode we roll out for each sub-env is
-    # finished. In contrast, "done" only relates to the current episode
-    # TODO: nao sei pq, mas o unfinished precisa por [0]
-    episode_return[unfinished] += reward[unfinished[0]].reshape(-1, 1)
-    # episode_return[unfinished] += reward[unfinished[0]].reshape(-1, 1)
+        # eval_env.step() will execute the action for all the sub-envs, for those where
+        # the episodes have terminated, the envs will be reset. Hence we use
+        # "unfinished" to track whether the first episode we roll out for each sub-env is
+        # finished. In contrast, "done" only relates to the current episode
+        # TODO: nao sei pq, mas o unfinished precisa por [0]
+        episode_return[unfinished] += reward[unfinished[0]].reshape(-1, 1)
+        # episode_return[unfinished] += reward[unfinished[0]].reshape(-1, 1)
 
-    actions[:, -1] = action
-    state = (
-        torch.from_numpy(state).to(device=device).reshape(num_envs, -1, state_dim)
-    )
-    states = torch.cat([states, state], dim=1)
-    del state
-    # print("states: {}".format(states))
-    # TODO: n sei pq, mas tive que por np.array em reward (na vdd sei, apenas 1 evaluate..)
-    reward = torch.from_numpy(np.array(reward)).to(device=device).reshape(num_envs, 1)
-    # reward = torch.from_numpy(reward).to(device=device).reshape(num_envs, 1)
-    rewards[:, -1] = reward
+        actions[:, -1] = action
+        state = (
+            torch.from_numpy(state).to(device=device).reshape(num_envs, -1, state_dim)
+        )
+        states = torch.cat([states, state], dim=1)
+        # print("states: {}".format(states))
+        # TODO: n sei pq, mas tive que por np.array em reward (na vdd sei, apenas 1 evaluate..)
+        reward = torch.from_numpy(np.array(reward)).to(device=device).reshape(num_envs, 1)
+        # reward = torch.from_numpy(reward).to(device=device).reshape(num_envs, 1)
+        rewards[:, -1] = reward
 
-    if mode != "delayed":
-        pred_return = target_return[:, -1] - (reward * reward_scale)
-    else:
-        pred_return = target_return[:, -1]
-    target_return = torch.cat(
-        [target_return, pred_return.reshape(num_envs, -1, 1)], dim=1
-    )
+        if mode != "delayed":
+            pred_return = target_return[:, -1] - (reward * reward_scale)
+        else:
+            pred_return = target_return[:, -1]
+        target_return = torch.cat(
+            [target_return, pred_return.reshape(num_envs, -1, 1)], dim=1
+        )
 
-    timesteps = torch.cat(
-        [
-            timesteps,
-            torch.ones((num_envs, 1), device=device, dtype=torch.long).reshape(
-                num_envs, 1
-            )
-            * (t + 1),
-        ],
-        dim=1,
-    )
+        timesteps = torch.cat(
+            [
+                timesteps,
+                torch.ones((num_envs, 1), device=device, dtype=torch.long).reshape(
+                    num_envs, 1
+                )
+                * (t + 1),
+            ],
+            dim=1,
+        )
 
-    if t == max_ep_len - 1:
-        done = np.ones(done.shape).astype(bool)
+        if t == max_ep_len - 1:
+            done = np.ones(done.shape).astype(bool)
 
-    if np.any(done):
-        ind = np.where(done)[0]
-        unfinished[ind] = False
-        episode_length[ind] = np.minimum(episode_length[ind], t + 1)
+        if np.any(done):
+            ind = np.where(done)[0]
+            unfinished[ind] = False
+            episode_length[ind] = np.minimum(episode_length[ind], t + 1)
 
-    if not np.any(unfinished):
-        break
+        if not np.any(unfinished):
+            break
 
-    calculate_tensors()
+        calculate_tensors()
 
 # In[ ]:
 
@@ -388,6 +385,22 @@ states.shape
 
 # In[ ]:
 
+
+# In[ ]:
+
+
+env.reset()
+env.close()
+
+terminal = False
+
+while not terminal:
+    with torch.no_grad():
+        action = model(env.state)  # mode.get_predictions blah
+
+    # action = np.array([3.0,3.0,3.0])
+    next_state, reward, terminal, _ = env.step(action)
+    env.render()
 
 # In[ ]:
 
