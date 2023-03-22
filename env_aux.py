@@ -47,30 +47,38 @@ def tan(theta):
     return np.tan((np.pi/180)*theta)
 
 
-def generate_unc_map_blobs(h_field,w_field, beta_decay):
+def generate_unc_map_blobs(h_field, w_field, beta_decay):
+    # rng = default_rng(seed=seedval)
+    rng = default_rng()
 
-	#rng = default_rng(seed=seedval)
-	rng = default_rng()
+    # create random noise image
+    noise = rng.integers(0, 255, (h_field, w_field), np.uint8, True)
 
-	# create random noise image
-	noise = rng.integers(0, 255, (h_field,w_field), np.uint8, True)
+    # blur the noise image to control the size
+    blur = cv2.GaussianBlur(noise, (0, 0), sigmaX=15, sigmaY=15, borderType=cv2.BORDER_DEFAULT)
 
-	# blur the noise image to control the size
-	blur = cv2.GaussianBlur(noise, (0,0), sigmaX=15, sigmaY=15, borderType = cv2.BORDER_DEFAULT)
+    # stretch the blurred image to full dynamic range
+    stretch = skimage.exposure.rescale_intensity(blur, in_range='image', out_range=(0, 255)).astype(np.uint8)
 
-	# stretch the blurred image to full dynamic range
-	stretch = skimage.exposure.rescale_intensity(blur, in_range='image', out_range=(0,255)).astype(np.uint8)
+    # threshold stretched image to control the size
+    thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
 
-	# threshold stretched image to control the size
-	thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
+    # apply morphology open and close to smooth out and make 3 channels
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    mask = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 
-	# apply morphology open and close to smooth out and make 3 channels
-	kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
-	mask = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-	mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # show results
+    mask = np.where(mask == 255, 1, beta_decay)
 
-	# show results
-	return np.where(mask==255,1,beta_decay)
+    equals_one = np.sum(np.sum(mask == 1))
+    diff_one = np.sum(np.sum(mask != 1))
+
+    # if there are too many beta decays values (reward will be affected). More ones, better rewards
+    if equals_one <= diff_one:
+        mask = np.where(mask == beta_decay, 1, beta_decay)
+
+    return mask
 
 
 def generate_unc_map_lines(h_field,w_field, beta_decay): # self
