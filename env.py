@@ -61,7 +61,8 @@ class Env():
 
         self.reward_list = []
         self.reward_list.append(0)
-        self.cv2_save_render = 0
+        self.cv2_save_render = 1 # 0
+        self.cv2_show_render = True
         self.cv2_save_number = 1
 
         # TODO: what is the observation space for x,y,h,last_r (reward? -inf to inf?)
@@ -397,7 +398,8 @@ class Env():
         #done_reward = 0 * np.sum(np.sum(self.map_unc_min_h - self.map_unc))  # 10/01/2023
         # normal_reward = np.sum(np.sum(prev_map - self.map_unc)) - self.time_punishment*(1 - (self.lower_height_achieved*self.lower_height_punishment_decrease)) - self.out_of_range*self.range_punishment # tempo igual a cada passo. Se ja viu, a reward é o prpoprio -time_punishment
 
-        self.done_reward = np.sum(np.sum(self.map_unc_min_h - self.map_unc))
+        #self.done_reward = np.sum(np.sum(self.map_unc_min_h - self.map_unc))
+        self.done_reward = 0*np.sum(np.sum(self.map_unc_min_h - self.map_unc))
         self.normal_reward = np.sum(np.sum(
             prev_map - self.map_unc)) - self.time_punishment - self.out_of_range * self.range_punishment  # tempo igual a cada passo. Se ja viu, a reward é o prpoprio -time_punishment
 
@@ -539,14 +541,18 @@ class Env():
 
         display1 = cv2.hconcat([unc_map_plt, img])
         display2 = cv2.vconcat([second_window_1, second_window_2])
-        cv2.imshow("f_decay / f_decay (norm) / flew_map / h_min", display2)
-        cv2.imshow("screen", display1)
 
-        if self.cv2_save_render:
+        if self.cv2_show_render:
+            cv2.imshow("f_decay / f_decay (norm) / flew_map / h_min", display2)
+            cv2.imshow("screen", display1)
+
+        if self.cv2_save_render or self.current_step==self.max_step:
             both_displays = cv2.vconcat([display1, display2])
-            cv2.imwrite(
-                'results/testing_images/screen_f_decay_f_decay_norm_flew_map_h_min_{}.jpg'.format(self.cv2_save_number),
-                both_displays)
+            save_path = 'results/testing_images/screen_f_decay_f_decay_norm_flew_map_h_min_{}_sum_r_{:.2f}.jpg'.format(
+                self.cv2_save_number,self.reward_list[-1])
+            print('saving results to: {}'.format(save_path))
+
+            cv2.imwrite(save_path,both_displays)
             self.cv2_save_number += 1
 
         cv2.waitKey(1)
