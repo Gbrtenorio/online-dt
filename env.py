@@ -48,7 +48,7 @@ class Env():
         self.min_displacement_h, self.max_displacement_h = -1.0, 1.0  # [m/s]
         self.denormalize_action_factor = 4.0  # so max/min speed is -4 to 4
         ## For the Agent
-        self.max_step = 4000 # 2000 #4000  # 2000
+        self.max_step = args.max_episode_len # 2000 #4000  # 2000
 
         # Some initialization
         self.max_reach_reward = -1
@@ -326,11 +326,12 @@ class Env():
 
     def step(self, action):
 
+
         done = False
-        self.current_step += 1
 
         if self.current_step > self.max_step:
             done = True
+        print(self.current_step)
 
         """
             The agent (drone) takes a step (flies somewhere) in the environment.
@@ -390,6 +391,7 @@ class Env():
             self.cv2_save_render = 0
 
         self.reward_list[-1] += self.reward
+        self.current_step += 1
 
         return self.state, self.reward, done, 0
 

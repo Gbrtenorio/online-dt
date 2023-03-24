@@ -318,17 +318,10 @@ class Experiment:
         print("loss_fn: {}".format(loss_fn))
         
         eval_fns = [
-            create_vec_eval_episodes_fn(
-                vec_env=eval_envs,
-                eval_rtg=self.variant["eval_rtg"],
-                state_dim=self.state_dim,
-                act_dim=self.act_dim,
-                state_mean=self.state_mean,
-                state_std=self.state_std,
-                device=self.device,
-                use_mean=True,
-                reward_scale=self.reward_scale,
-            )
+            create_vec_eval_episodes_fn(vec_env=eval_envs, eval_rtg=self.variant["eval_rtg"], state_dim=self.state_dim,
+                                        act_dim=self.act_dim, state_mean=self.state_mean, state_std=self.state_std,
+                                        device=self.device, max_episode_len=, use_mean=True,
+                                        reward_scale=self.reward_scale)
         ]
 
         trainer = SequenceTrainer(
@@ -403,17 +396,10 @@ class Experiment:
             device=self.device,
         )
         eval_fns = [
-            create_vec_eval_episodes_fn(
-                vec_env=eval_envs,
-                eval_rtg=self.variant["eval_rtg"],
-                state_dim=self.state_dim,
-                act_dim=self.act_dim,
-                state_mean=self.state_mean,
-                state_std=self.state_std,
-                device=self.device,
-                use_mean=True,
-                reward_scale=self.reward_scale,
-            )
+            create_vec_eval_episodes_fn(vec_env=eval_envs, eval_rtg=self.variant["eval_rtg"], state_dim=self.state_dim,
+                                        act_dim=self.act_dim, state_mean=self.state_mean, state_std=self.state_std,
+                                        device=self.device, max_episode_len=, use_mean=True,
+                                        reward_scale=self.reward_scale)
         ]
         writer = (
             SummaryWriter(self.logger.log_path) if self.variant["log_to_tb"] else None

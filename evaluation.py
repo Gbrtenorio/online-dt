@@ -8,7 +8,7 @@ LICENSE.md file in the root directory of this source tree.
 import numpy as np
 import torch
 
-MAX_EPISODE_LEN = 4000
+#MAX_EPISODE_LEN = 2000
 
 
 def create_vec_eval_episodes_fn(
@@ -19,8 +19,10 @@ def create_vec_eval_episodes_fn(
     state_mean,
     state_std,
     device,
+    max_episode_len,
     use_mean=False,
     reward_scale=0.001,
+
 ):
     def eval_episodes_fn(model):
         target_return = [eval_rtg * reward_scale] * vec_env.num_envs
@@ -29,7 +31,7 @@ def create_vec_eval_episodes_fn(
             state_dim,
             act_dim,
             model,
-            max_ep_len=MAX_EPISODE_LEN,
+            max_ep_len=max_episode_len,
             reward_scale=reward_scale,
             target_return=target_return,
             mode="normal",
@@ -37,6 +39,7 @@ def create_vec_eval_episodes_fn(
             state_std=state_std,
             device=device,
             use_mean=use_mean,
+
         )
         suffix = "_gm" if use_mean else ""
         return {

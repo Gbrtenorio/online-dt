@@ -10,7 +10,7 @@ import numpy as np
 import random
 
 
-MAX_EPISODE_LEN = 4000
+#MAX_EPISODE_LEN = 4000
 
 
 class SubTrajectory(torch.utils.data.Dataset):
@@ -53,6 +53,7 @@ class TransformSamplingSubTraj:
         state_std,
         reward_scale,
         action_range,
+        max_episode_len,
     ):
         super().__init__()
         self.max_len = max_len
@@ -61,6 +62,7 @@ class TransformSamplingSubTraj:
         self.state_mean = state_mean
         self.state_std = state_std
         self.reward_scale = reward_scale
+        self.max_episode_len = max_episode_len
 
         # For some datasets there are actions with values 1.0/-1.0 which is problematic
         # for the SquahsedNormal distribution. The inversed tanh transformation will
@@ -85,9 +87,9 @@ class TransformSamplingSubTraj:
 
         timesteps = np.arange(si, si + tlen)  # .reshape(-1)
         ordering = np.arange(tlen)
-        ordering[timesteps >= MAX_EPISODE_LEN] = -1
+        ordering[timesteps >= self.max_episode_len] = -1
         ordering[ordering == -1] = ordering.max()
-        timesteps[timesteps >= MAX_EPISODE_LEN] = MAX_EPISODE_LEN - 1  # padding cutoff
+        timesteps[timesteps >= self.max_episode_len] = self.max_episode_len - 1  # padding cutoff
 
         rtg = discount_cumsum(traj["rewards"][si:], gamma=1.0)[: tlen + 1].reshape(
             -1, 1
@@ -137,6 +139,7 @@ def create_dataloader(
     state_std,
     reward_scale,
     action_range,
+    max_episode_len,
     num_workers=20,
 ):
     # total number of subt-rajectories you need to sample
@@ -151,6 +154,7 @@ def create_dataloader(
         state_std=state_std,
         reward_scale=reward_scale,
         action_range=action_range,
+        max_episode_len=max_episode_len,
     )
 
     subset = SubTrajectory(trajectories, sampling_ind=sampling_ind, transform=transform)
