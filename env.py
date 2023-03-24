@@ -331,7 +331,6 @@ class Env():
 
         if self.current_step > self.max_step:
             done = True
-        print(self.current_step)
 
         """
             The agent (drone) takes a step (flies somewhere) in the environment.
