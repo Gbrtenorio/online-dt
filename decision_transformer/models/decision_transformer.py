@@ -159,7 +159,7 @@ class DecisionTransformer(TrajectoryModel):
         **kwargs
     ):
         super().__init__(state_dim, act_dim, max_length=max_length)
-
+        print(kwargs)
         self.hidden_size = hidden_size
         config = transformers.GPT2Config(
             vocab_size=1,  # doesn't matter -- we don't use the vocab
