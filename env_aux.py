@@ -153,3 +153,9 @@ def generate_random_boxes(h_field, w_field, beta_decay):
 
 def partialupdate(area, uncertainty):
     return area * uncertainty + 1 - area
+
+def normalize_reward(reward):
+    min_reward = -2 # TODO: hard-coded, taken from the dataset
+    max_reward = 42  # TODO: hard-coded, taken from the dataset
+    normalized_reward = (reward - min_reward) / (max_reward - min_reward)
+    return normalized_reward

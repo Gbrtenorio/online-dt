@@ -412,9 +412,9 @@ class Env():
         '''
 
         if done == True:
-            return self.done_reward
+            return normalize_reward(self.done_reward)    # TODO: Normaling Reward
         else:
-            return self.normal_reward
+            return normalize_reward(self.normal_reward)  # TODO: Normaling Reward
 
 
 
