@@ -155,7 +155,10 @@ def partialupdate(area, uncertainty):
     return area * uncertainty + 1 - area
 
 def normalize_reward(reward):
-    min_reward = -2 # TODO: hard-coded, taken from the dataset
-    max_reward = 42  # TODO: hard-coded, taken from the dataset
-    normalized_reward = (reward - min_reward) / (max_reward - min_reward)
+    min_reward = -12 # TODO: hard-coded, taken from the dataset
+    max_reward = 102#42  # TODO: hard-coded, taken from the dataset
+    #normalized_reward = (reward - min_reward) / (max_reward - min_reward)
+    normalized_reward =  reward/max_reward
     return normalized_reward
+
+# reward = (max_reward - min_reward)*normalized_reward + min_reward
